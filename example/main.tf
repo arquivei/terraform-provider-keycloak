@@ -90,6 +90,12 @@ resource "keycloak_realm" "test" {
   }
 }
 
+resource "keycloak_authentication_bindings" "test_bindings" {
+  realm_id = keycloak_realm.test.id
+
+  browser_flow = keycloak_authentication_flow.browser-copy-flow.alias
+}
+
 resource "keycloak_required_action" "custom-terms-and-conditions" {
   realm_id       = keycloak_realm.test.realm
   alias          = "terms_and_conditions"
