@@ -49,6 +49,7 @@ type IdentityProviderConfig struct {
 	PrincipalAttribute               string                 `json:"principalAttribute,omitempty"`
 	GuiOrder                         string                 `json:"guiOrder,omitempty"`
 	SyncMode                         string                 `json:"syncMode,omitempty"`
+	ArquiveiAccountId                string                 `json:"ArquiveiAccountId,omitempty"`
 	ExtraConfig                      map[string]interface{} `json:"-"`
 }
 

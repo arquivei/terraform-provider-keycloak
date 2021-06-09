@@ -139,6 +139,12 @@ func resourceKeycloakSamlIdentityProvider() *schema.Resource {
 			Default:     "",
 			Description: "Principal Attribute",
 		},
+		"arquivei_account_id": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Default:     "",
+			Description: "The Account ID in Arquivei",
+		},
 	}
 	samlResource := resourceKeycloakIdentityProvider()
 	samlResource.Schema = mergeSchemas(samlResource.Schema, samlSchema)
@@ -171,6 +177,7 @@ func getSamlIdentityProviderFromData(data *schema.ResourceData) (*keycloak.Ident
 		WantAssertionsEncrypted:          keycloak.KeycloakBoolQuoted(data.Get("want_assertions_encrypted").(bool)),
 		PrincipalType:                    data.Get("principal_type").(string),
 		PrincipalAttribute:               data.Get("principal_attribute").(string),
+		ArquiveiAccountId:                data.Get("arquivei_account_id").(string),
 	}
 
 	if _, ok := data.GetOk("signature_algorithm"); ok {
@@ -207,6 +214,7 @@ func setSamlIdentityProviderData(data *schema.ResourceData, identityProvider *ke
 	data.Set("want_assertions_encrypted", identityProvider.Config.WantAssertionsEncrypted)
 	data.Set("principal_type", identityProvider.Config.PrincipalType)
 	data.Set("principal_attribute", identityProvider.Config.PrincipalAttribute)
+	data.Set("arquivei_account_id", identityProvider.Config.ArquiveiAccountId)
 
 	return nil
 }
