@@ -16,6 +16,10 @@ Also note that you should not use `keycloak_group_memberships` with a group has 
 This resource **should not** be used to control membership of a group that has its members federated from an external
 source via group mapping.
 
+To non-exclusively manage the group's of a user, see the [`keycloak_user_groups` resource][1]
+
+This resource paginates its data loading on refresh by 50 items.
+
 ## Example Usage
 
 ```hcl
@@ -54,3 +58,5 @@ resource "keycloak_group_memberships" "group_members" {
 
 This resource does not support import. Instead of importing, feel free to create this resource
 as if it did not already exist on the server.
+
+[1]: providers/mrparkers/keycloak/latest/docs/resources/group_memberships

@@ -20,6 +20,7 @@ type IdentityProviderConfig struct {
 	UserInfoUrl                      string                 `json:"userInfoUrl,omitempty"`
 	HideOnLoginPage                  KeycloakBoolQuoted     `json:"hideOnLoginPage"`
 	NameIDPolicyFormat               string                 `json:"nameIDPolicyFormat,omitempty"`
+	EntityId                         string                 `json:"entityId,omitempty"`
 	SingleLogoutServiceUrl           string                 `json:"singleLogoutServiceUrl,omitempty"`
 	SingleSignOnServiceUrl           string                 `json:"singleSignOnServiceUrl,omitempty"`
 	SigningCertificate               string                 `json:"signingCertificate,omitempty"`
@@ -44,6 +45,10 @@ type IdentityProviderConfig struct {
 	HostedDomain                     string                 `json:"hostedDomain,omitempty"`
 	UserIp                           KeycloakBoolQuoted     `json:"userIp,omitempty"`
 	OfflineAccess                    KeycloakBoolQuoted     `json:"offlineAccess,omitempty"`
+	PrincipalType                    string                 `json:"principalType,omitempty"`
+	PrincipalAttribute               string                 `json:"principalAttribute,omitempty"`
+	GuiOrder                         string                 `json:"guiOrder,omitempty"`
+	SyncMode                         string                 `json:"syncMode,omitempty"`
 	ExtraConfig                      map[string]interface{} `json:"-"`
 }
 

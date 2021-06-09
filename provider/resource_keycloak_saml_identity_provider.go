@@ -3,6 +3,7 @@ package provider
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
+	"github.com/imdario/mergo"
 	"github.com/mrparkers/terraform-provider-keycloak/keycloak"
 )
 
@@ -26,6 +27,12 @@ var keyNameTransformers = []string{
 	"NONE",
 	"KEY_ID",
 	"CERT_SUBJECT",
+}
+
+var principalTypes = []string{
+	"SUBJECT",
+	"ATTRIBUTE",
+	"FRIENDLY_ATTRIBUTE",
 }
 
 func resourceKeycloakSamlIdentityProvider() *schema.Resource {
@@ -59,6 +66,11 @@ func resourceKeycloakSamlIdentityProvider() *schema.Resource {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: "Logout URL.",
+		},
+		"entity_id": {
+			Type:        schema.TypeString,
+			Required:    true,
+			Description: "The Entity ID that will be used to uniquely identify this SAML Service Provider.",
 		},
 		"single_sign_on_service_url": {
 			Type:        schema.TypeString,
@@ -114,6 +126,19 @@ func resourceKeycloakSamlIdentityProvider() *schema.Resource {
 			Optional:    true,
 			Description: "Want Assertions Encrypted.",
 		},
+		"principal_type": {
+			Type:         schema.TypeString,
+			Optional:     true,
+			Default:      "",
+			ValidateFunc: validation.StringInSlice(principalTypes, false),
+			Description:  "Principal Type",
+		},
+		"principal_attribute": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Default:     "",
+			Description: "Principal Attribute",
+		},
 	}
 	samlResource := resourceKeycloakIdentityProvider()
 	samlResource.Schema = mergeSchemas(samlResource.Schema, samlSchema)
@@ -124,13 +149,15 @@ func resourceKeycloakSamlIdentityProvider() *schema.Resource {
 }
 
 func getSamlIdentityProviderFromData(data *schema.ResourceData) (*keycloak.IdentityProvider, error) {
-	rec, _ := getIdentityProviderFromData(data)
+	rec, defaultConfig := getIdentityProviderFromData(data)
 	rec.ProviderId = "saml"
-	rec.Config = &keycloak.IdentityProviderConfig{
+
+	samlIdentityProviderConfig := &keycloak.IdentityProviderConfig{
 		ValidateSignature:                keycloak.KeycloakBoolQuoted(data.Get("validate_signature").(bool)),
 		HideOnLoginPage:                  keycloak.KeycloakBoolQuoted(data.Get("hide_on_login_page").(bool)),
 		BackchannelSupported:             keycloak.KeycloakBoolQuoted(data.Get("backchannel_supported").(bool)),
 		NameIDPolicyFormat:               nameIdPolicyFormats[data.Get("name_id_policy_format").(string)],
+		EntityId:                         data.Get("entity_id").(string),
 		SingleLogoutServiceUrl:           data.Get("single_logout_service_url").(string),
 		SingleSignOnServiceUrl:           data.Get("single_sign_on_service_url").(string),
 		SigningCertificate:               data.Get("signing_certificate").(string),
@@ -142,19 +169,31 @@ func getSamlIdentityProviderFromData(data *schema.ResourceData) (*keycloak.Ident
 		ForceAuthn:                       keycloak.KeycloakBoolQuoted(data.Get("force_authn").(bool)),
 		WantAssertionsSigned:             keycloak.KeycloakBoolQuoted(data.Get("want_assertions_signed").(bool)),
 		WantAssertionsEncrypted:          keycloak.KeycloakBoolQuoted(data.Get("want_assertions_encrypted").(bool)),
+		PrincipalType:                    data.Get("principal_type").(string),
+		PrincipalAttribute:               data.Get("principal_attribute").(string),
 	}
+
 	if _, ok := data.GetOk("signature_algorithm"); ok {
-		rec.Config.WantAuthnRequestsSigned = true
+		samlIdentityProviderConfig.WantAuthnRequestsSigned = true
 	}
+
+	if err := mergo.Merge(samlIdentityProviderConfig, defaultConfig); err != nil {
+		return nil, err
+	}
+
+	rec.Config = samlIdentityProviderConfig
+
 	return rec, nil
 }
 
 func setSamlIdentityProviderData(data *schema.ResourceData, identityProvider *keycloak.IdentityProvider) error {
 	setIdentityProviderData(data, identityProvider)
+
 	data.Set("backchannel_supported", identityProvider.Config.BackchannelSupported)
 	data.Set("validate_signature", identityProvider.Config.ValidateSignature)
 	data.Set("hide_on_login_page", identityProvider.Config.HideOnLoginPage)
 	data.Set("name_id_policy_format", identityProvider.Config.NameIDPolicyFormat)
+	data.Set("entity_id", identityProvider.Config.EntityId)
 	data.Set("single_logout_service_url", identityProvider.Config.SingleLogoutServiceUrl)
 	data.Set("single_sign_on_service_url", identityProvider.Config.SingleSignOnServiceUrl)
 	data.Set("signing_certificate", identityProvider.Config.SigningCertificate)
@@ -166,5 +205,8 @@ func setSamlIdentityProviderData(data *schema.ResourceData, identityProvider *ke
 	data.Set("force_authn", identityProvider.Config.ForceAuthn)
 	data.Set("want_assertions_signed", identityProvider.Config.WantAssertionsSigned)
 	data.Set("want_assertions_encrypted", identityProvider.Config.WantAssertionsEncrypted)
+	data.Set("principal_type", identityProvider.Config.PrincipalType)
+	data.Set("principal_attribute", identityProvider.Config.PrincipalAttribute)
+
 	return nil
 }

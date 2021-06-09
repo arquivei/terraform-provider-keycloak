@@ -24,6 +24,8 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 			"keycloak_saml_client_installation_provider":  dataSourceKeycloakSamlClientInstallationProvider(),
 			"keycloak_saml_client":                        dataSourceKeycloakSamlClient(),
 			"keycloak_authentication_execution":           dataSourceKeycloakAuthenticationExecution(),
+			"keycloak_authentication_flow":                dataSourceKeycloakAuthenticationFlow(),
+			"keycloak_client_description_converter":       dataSourceKeycloakClientDescriptionConverter(),
 		},
 		ResourcesMap: map[string]*schema.Resource{
 			"keycloak_realm":                                             resourceKeycloakRealm(),
@@ -67,11 +69,13 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 			"keycloak_generic_client_role_mapper":                        resourceKeycloakGenericClientRoleMapper(),
 			"keycloak_saml_user_attribute_protocol_mapper":               resourceKeycloakSamlUserAttributeProtocolMapper(),
 			"keycloak_saml_user_property_protocol_mapper":                resourceKeycloakSamlUserPropertyProtocolMapper(),
+			"keycloak_saml_script_protocol_mapper":                       resourceKeycloakSamlScriptProtocolMapper(),
 			"keycloak_hardcoded_attribute_identity_provider_mapper":      resourceKeycloakHardcodedAttributeIdentityProviderMapper(),
 			"keycloak_hardcoded_role_identity_provider_mapper":           resourceKeycloakHardcodedRoleIdentityProviderMapper(),
 			"keycloak_attribute_importer_identity_provider_mapper":       resourceKeycloakAttributeImporterIdentityProviderMapper(),
 			"keycloak_attribute_to_role_identity_provider_mapper":        resourceKeycloakAttributeToRoleIdentityProviderMapper(),
 			"keycloak_user_template_importer_identity_provider_mapper":   resourceKeycloakUserTemplateImporterIdentityProviderMapper(),
+			"keycloak_custom_identity_provider_mapper":                   resourceKeycloakCustomIdentityProviderMapper(),
 			"keycloak_saml_identity_provider":                            resourceKeycloakSamlIdentityProvider(),
 			"keycloak_oidc_google_identity_provider":                     resourceKeycloakOidcGoogleIdentityProvider(),
 			"keycloak_oidc_identity_provider":                            resourceKeycloakOidcIdentityProvider(),
@@ -95,6 +99,7 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 			"keycloak_identity_provider_token_exchange_scope_permission": resourceKeycloakIdentityProviderTokenExchangeScopePermission(),
 			"keycloak_openid_client_permissions":                         resourceKeycloakOpenidClientPermissions(),
 			"keycloak_users_permissions":                                 resourceKeycloakUsersPermissions(),
+			"keycloak_user_groups":                                       resourceKeycloakUserGroups(),
 			"keycloak_authentication_bindings":                           resourceKeycloakAuthenticationBindings(),
 		},
 		Schema: map[string]*schema.Schema{
@@ -158,6 +163,13 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 				Type:     schema.TypeString,
 				Default:  "/auth",
 			},
+			"additional_headers": {
+				Optional: true,
+				Type:     schema.TypeMap,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+			},
 		},
 	}
 
@@ -177,12 +189,16 @@ func KeycloakProvider(client *keycloak.KeycloakClient) *schema.Provider {
 		clientTimeout := data.Get("client_timeout").(int)
 		tlsInsecureSkipVerify := data.Get("tls_insecure_skip_verify").(bool)
 		rootCaCertificate := data.Get("root_ca_certificate").(string)
+		additionalHeaders := make(map[string]string)
+		for k, v := range data.Get("additional_headers").(map[string]interface{}) {
+			additionalHeaders[k] = v.(string)
+		}
 
 		var diags diag.Diagnostics
 
 		userAgent := fmt.Sprintf("HashiCorp Terraform/%s (+https://www.terraform.io) Terraform Plugin SDK/%s", provider.TerraformVersion, meta.SDKVersionString())
 
-		keycloakClient, err := keycloak.NewKeycloakClient(url, basePath, clientId, clientSecret, realm, username, password, initialLogin, clientTimeout, rootCaCertificate, tlsInsecureSkipVerify, userAgent)
+		keycloakClient, err := keycloak.NewKeycloakClient(url, basePath, clientId, clientSecret, realm, username, password, initialLogin, clientTimeout, rootCaCertificate, tlsInsecureSkipVerify, userAgent, additionalHeaders)
 		if err != nil {
 			diags = append(diags, diag.Diagnostic{
 				Severity: diag.Error,

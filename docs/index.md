@@ -17,11 +17,11 @@ sure which to use, the client credentials grant is recommended, as it was design
 1. Create a new client using the `openid-connect` protocol. This client can be created in the `master` realm if you would
 like to manage your entire Keycloak instance, or in any other realm if you only want to manage that realm.
 1. Update the client you just created:
-    1. Set "Access Type" to "confidential".
-    1. Set "Standard Flow Enabled" to "OFF".
-    1. Set "Direct Access Grants Enabled" to "OFF"
-    1. Set "Service Accounts Enabled" to "ON".
-1. Grant required roles for managing Keycloak via the "Service Account Roles" tab in the client you created in step 1.
+    1. Set `Access Type` to `confidential`.
+    1. Set `Standard Flow Enabled` to `OFF`.
+    1. Set `Direct Access Grants Enabled` to `OFF`
+    1. Set `Service Accounts Enabled` to `ON`.
+1. Grant required roles for managing Keycloak via the `Service Account Roles` tab in the client you created in step 1, see [Assigning Roles](#assigning-roles) section below.
 
 ### Password Grant Setup
 
@@ -80,3 +80,4 @@ The following arguments are supported:
 - `tls_insecure_skip_verify` - (Optional) Allows ignoring insecure certificates when set to true. Defaults to false. Disabling security check is dangerous and should be avoided.
 - `root_ca_certificate` - (Optional) Allows x509 calls using an unknown CA certificate (for development purposes)
 - `base_path` - (Optional) The base path used for accessing the Keycloak REST API.  Defaults to `/auth`
+- `additional_headers` - (Optional) A map of custom headers to add to each requests, to work with proxy filtering requests without these headers for example. Defaults to an empty map.

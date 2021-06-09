@@ -6,15 +6,15 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/go-version"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
 	"strings"
-	"sync"
 	"time"
+
+	"github.com/hashicorp/go-version"
 
 	"golang.org/x/net/publicsuffix"
 )
@@ -27,7 +27,7 @@ type KeycloakClient struct {
 	initialLogin      bool
 	userAgent         string
 	version           *version.Version
-	mu                sync.Mutex
+	additionalHeaders map[string]string
 }
 
 type ClientCredentials struct {
@@ -46,7 +46,7 @@ const (
 	tokenUrl = "%s/realms/%s/protocol/openid-connect/token"
 )
 
-func NewKeycloakClient(url, basePath, clientId, clientSecret, realm, username, password string, initialLogin bool, clientTimeout int, caCert string, tlsInsecureSkipVerify bool, userAgent string) (*KeycloakClient, error) {
+func NewKeycloakClient(url, basePath, clientId, clientSecret, realm, username, password string, initialLogin bool, clientTimeout int, caCert string, tlsInsecureSkipVerify bool, userAgent string, additionalHeaders map[string]string) (*KeycloakClient, error) {
 	cookieJar, err := cookiejar.New(&cookiejar.Options{
 		PublicSuffixList: publicsuffix.List,
 	})
@@ -95,7 +95,7 @@ func NewKeycloakClient(url, basePath, clientId, clientSecret, realm, username, p
 		initialLogin:      initialLogin,
 		realm:             realm,
 		userAgent:         userAgent,
-		mu:                sync.Mutex{},
+		additionalHeaders: additionalHeaders,
 	}
 
 	if keycloakClient.initialLogin {
@@ -109,9 +109,6 @@ func NewKeycloakClient(url, basePath, clientId, clientSecret, realm, username, p
 }
 
 func (keycloakClient *KeycloakClient) login() error {
-	keycloakClient.mu.Lock()
-	defer keycloakClient.mu.Unlock()
-
 	accessTokenUrl := fmt.Sprintf(tokenUrl, keycloakClient.baseUrl, keycloakClient.realm)
 	accessTokenData := keycloakClient.getAuthenticationFormData()
 
@@ -120,6 +117,10 @@ func (keycloakClient *KeycloakClient) login() error {
 	accessTokenRequest, err := http.NewRequest(http.MethodPost, accessTokenUrl, strings.NewReader(accessTokenData.Encode()))
 	if err != nil {
 		return err
+	}
+
+	for header, value := range keycloakClient.additionalHeaders {
+		accessTokenRequest.Header.Set(header, value)
 	}
 
 	accessTokenRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -173,9 +174,6 @@ func (keycloakClient *KeycloakClient) login() error {
 }
 
 func (keycloakClient *KeycloakClient) refresh() error {
-	keycloakClient.mu.Lock()
-	defer keycloakClient.mu.Unlock()
-
 	refreshTokenUrl := fmt.Sprintf(tokenUrl, keycloakClient.baseUrl, keycloakClient.realm)
 	refreshTokenData := keycloakClient.getAuthenticationFormData()
 
@@ -184,6 +182,10 @@ func (keycloakClient *KeycloakClient) refresh() error {
 	refreshTokenRequest, err := http.NewRequest(http.MethodPost, refreshTokenUrl, strings.NewReader(refreshTokenData.Encode()))
 	if err != nil {
 		return err
+	}
+
+	for header, value := range keycloakClient.additionalHeaders {
+		refreshTokenRequest.Header.Set(header, value)
 	}
 
 	refreshTokenRequest.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -246,6 +248,10 @@ func (keycloakClient *KeycloakClient) getAuthenticationFormData() url.Values {
 func (keycloakClient *KeycloakClient) addRequestHeaders(request *http.Request) {
 	tokenType := keycloakClient.clientCredentials.TokenType
 	accessToken := keycloakClient.clientCredentials.AccessToken
+
+	for header, value := range keycloakClient.additionalHeaders {
+		request.Header.Set(header, value)
+	}
 
 	request.Header.Set("Authorization", fmt.Sprintf("%s %s", tokenType, accessToken))
 	request.Header.Set("Accept", "application/json")
@@ -362,6 +368,19 @@ func (keycloakClient *KeycloakClient) getRaw(path string, params map[string]stri
 	}
 
 	body, _, err := keycloakClient.sendRequest(request, nil)
+	return body, err
+}
+
+func (keycloakClient *KeycloakClient) sendRaw(path string, requestBody []byte) ([]byte, error) {
+	resourceUrl := keycloakClient.baseUrl + apiUrl + path
+
+	request, err := http.NewRequest(http.MethodPost, resourceUrl, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	body, _, err := keycloakClient.sendRequest(request, requestBody)
+
 	return body, err
 }
 
